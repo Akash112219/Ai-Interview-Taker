@@ -651,7 +651,7 @@ def admin_company():
             c.profile_img,
             c.created_at,
             u.cnic AS cnic,
-            COALESCE(u.is_active, 1) AS is_active,
+            COALESCE(u.is_active, TRUE) AS is_active,
             COALESCE((SELECT COUNT(*) FROM users cu WHERE cu.company_id = c.id AND cu.role = 'company_user'), 0) AS team_size,
             COALESCE((
                 SELECT s.plan_id
