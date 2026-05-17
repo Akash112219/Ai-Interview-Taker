@@ -42,6 +42,11 @@ load_dotenv(os.path.join(basedir, '.env'))
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    return f"<pre>{traceback.format_exc()}</pre>", 500
+
 # Configure Upload Folder
 if os.environ.get('VERCEL'):
     UPLOAD_FOLDER = '/tmp/uploads'
@@ -52,8 +57,8 @@ try:
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(os.path.join(UPLOAD_FOLDER, 'profiles'), exist_ok=True)
     os.makedirs(os.path.join(UPLOAD_FOLDER, 'documents'), exist_ok=True)
-except OSError as e:
-    print(f"Warning: Could not create upload directories: {e}")
+except OSError:
+    pass
 
 def handle_file_upload(file, roletype, name):
     if not file or file.filename == '':
