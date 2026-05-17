@@ -76,6 +76,11 @@ def handle_file_upload(file, roletype, name):
     file.save(upload_path)
     return f"/static/uploads/profiles/{filename}"
 
+@app.route('/static/uploads/<path:filename>')
+def serve_static_uploads(filename):
+    from flask import send_from_directory
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
 # =========================
 # DATABASE CONNECTION
 # =========================
@@ -186,13 +191,13 @@ def get_notification_data(user_id, role=None):
         cursor = get_db_cursor(db, dictionary=True)
         if role == 'admin':
             # Admin sees global notifications
-            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE is_read = 0")
+            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE")
             count = cursor.fetchone()["total"]
             cursor.execute("SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5")
             recent = cursor.fetchall()
         else:
             # Users see their own notifications
-            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE user_id = %s AND is_read = 0", (user_id,))
+            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE user_id = %s AND is_read = FALSE", (user_id,))
             count = cursor.fetchone()["total"]
             cursor.execute("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC LIMIT 5", (user_id,))
             recent = cursor.fetchall()
@@ -653,7 +658,7 @@ def admin_company():
             c.profile_img,
             c.created_at,
             u.cnic AS cnic,
-            COALESCE(u.is_active, 1) AS is_active,
+            COALESCE(u.is_active, TRUE) AS is_active,
             COALESCE((SELECT COUNT(*) FROM users cu WHERE cu.company_id = c.id AND cu.role = 'company_user'), 0) AS team_size,
             COALESCE((
                 SELECT s.plan_id
@@ -662,7 +667,7 @@ def admin_company():
                 WHERE company_user.email = c.email AND company_user.role = 'company'
                 ORDER BY s.created_at DESC
                 LIMIT 1
-            ), '') AS current_plan_id
+            ), NULL) AS current_plan_id
         FROM companies c
         LEFT JOIN users u ON u.email = c.email AND u.role = 'company'
         ORDER BY c.created_at DESC, c.id DESC
@@ -1203,7 +1208,7 @@ def company_subscription():
     """, (session["user_id"],))
     subscription = cursor.fetchone()
     
-    cursor.execute("SELECT * FROM subscription_plans WHERE target_audience = 'company' AND is_active = 1 ORDER BY monthly_price ASC")
+    cursor.execute("SELECT * FROM subscription_plans WHERE target_audience = 'company' AND is_active = TRUE ORDER BY monthly_price ASC")
     plans = cursor.fetchall()
     
     cursor.execute("SELECT * FROM payment_methods WHERE user_id = %s ORDER BY is_primary DESC, created_at DESC", (session["user_id"],))
@@ -1273,7 +1278,7 @@ def add_payment_method():
     # Check if this is the first card, make it primary if so
     cursor.execute("SELECT COUNT(*) FROM payment_methods WHERE user_id=%s", (session["user_id"],))
     count = cursor.fetchone()[0]
-    is_primary = 1 if count == 0 else 0
+    is_primary = True if count == 0 else False
     
     cursor.execute("""
         INSERT INTO payment_methods (user_id, name_on_card, card_number, expiry, cvv, is_primary)
@@ -1296,8 +1301,8 @@ def set_primary_payment_method():
     db = get_db()
     cursor = get_db_cursor(db)
     
-    cursor.execute("UPDATE payment_methods SET is_primary=0 WHERE user_id=%s", (session["user_id"],))
-    cursor.execute("UPDATE payment_methods SET is_primary=1 WHERE id=%s AND user_id=%s", (card_id, session["user_id"]))
+    cursor.execute("UPDATE payment_methods SET is_primary=FALSE WHERE user_id=%s", (session["user_id"],))
+    cursor.execute("UPDATE payment_methods SET is_primary=TRUE WHERE id=%s AND user_id=%s", (card_id, session["user_id"]))
     
     db.commit()
     db.close()
@@ -1315,7 +1320,7 @@ def upgrade_subscription():
     cursor = get_db_cursor(db, dictionary=True)
     
     # Check for primary payment method
-    cursor.execute("SELECT id FROM payment_methods WHERE user_id=%s AND is_primary=1", (session["user_id"],))
+    cursor.execute("SELECT id FROM payment_methods WHERE user_id=%s AND is_primary=TRUE", (session["user_id"],))
     pm = cursor.fetchone()
     if not pm:
         db.close()
@@ -1563,7 +1568,7 @@ def client_support():
 def index():
     db = get_db()
     cursor = get_db_cursor(db, dictionary=True)
-    cursor.execute("SELECT * FROM subscription_plans WHERE is_active = 1 ORDER BY monthly_price ASC")
+    cursor.execute("SELECT * FROM subscription_plans WHERE is_active = TRUE ORDER BY monthly_price ASC")
     plans = cursor.fetchall()
     db.close()
     return render_template("index.html", subscription_plans=plans)
@@ -1748,7 +1753,7 @@ def admin_suspend_user(user_id):
             return jsonify({"error": "User not found"}), 404
 
         # Suspend user
-        cursor.execute("UPDATE users SET is_active=0 WHERE id=%s", (user_id,))
+        cursor.execute("UPDATE users SET is_active=FALSE WHERE id=%s", (user_id,))
         
         db.commit()
         db.close()
@@ -1775,7 +1780,7 @@ def admin_unsuspend_user(user_id):
             return jsonify({"error": "User not found"}), 404
 
         # Unsuspend user
-        cursor.execute("UPDATE users SET is_active=1 WHERE id=%s", (user_id,))
+        cursor.execute("UPDATE users SET is_active=TRUE WHERE id=%s", (user_id,))
         
         db.commit()
         db.close()
@@ -1996,7 +2001,7 @@ def admin_create_company():
 
         new_user_id = execute_insert_returning_id(db, cursor, """
             INSERT INTO users (username, email, password_hash, first_name, last_name, phone, country, role, is_active, cnic, profile_img)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'company', 1, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'company', TRUE, %s, %s)
         """, (email.split("@", 1)[0], email, hashed_password, first_name, last_name, phone, country, cnic, profile_img))
 
         # Create company
@@ -2113,7 +2118,7 @@ def admin_suspend_company(company_id):
         # Suspend company user account
         cursor.execute("""
             UPDATE users 
-            SET is_active=0 
+            SET is_active=FALSE 
             WHERE email=(SELECT email FROM companies WHERE id=%s) AND role='company'
         """, (company_id,))
         
@@ -2142,7 +2147,7 @@ def admin_unsuspend_company(company_id):
         # Unsuspend company user account
         cursor.execute("""
             UPDATE users 
-            SET is_active=1 
+            SET is_active=TRUE 
             WHERE email=(SELECT email FROM companies WHERE id=%s) AND role='company'
         """, (company_id,))
         
@@ -2213,7 +2218,7 @@ def admin_create_subscription_plan():
         cursor.execute("""
             INSERT INTO subscription_plans 
             (name, target_audience, monthly_price, yearly_price, features, is_active)
-            VALUES (%s, %s, %s, %s, %s, 1)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
         """, (name, target_audience, monthly_price, yearly_price, features))
         
         db.commit()
@@ -2396,7 +2401,7 @@ def company_users_import():
             
             new_user_id = execute_insert_returning_id(db, cursor, """
                 INSERT INTO users (username, email, password_hash, first_name, last_name, company_id, role, cnic, designation, is_active)
-                VALUES (%s, %s, %s, %s, %s, %s, 'company_user', %s, %s, 1)
+                VALUES (%s, %s, %s, %s, %s, %s, 'company_user', %s, %s, TRUE)
             """, (username, email, hashed_password, first_name, last_name, company_id, cnic, designation))
             
             prefix = "".join(filter(str.isalnum, str(comp["company_name"])))[:2].upper()
