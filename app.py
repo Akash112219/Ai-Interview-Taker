@@ -660,7 +660,7 @@ def admin_company():
                 WHERE company_user.email = c.email AND company_user.role = 'company'
                 ORDER BY s.created_at DESC
                 LIMIT 1
-            ), '') AS current_plan_id
+            ), NULL) AS current_plan_id
         FROM companies c
         LEFT JOIN users u ON u.email = c.email AND u.role = 'company'
         ORDER BY c.created_at DESC, c.id DESC
