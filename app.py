@@ -1201,7 +1201,7 @@ def company_subscription():
     """, (session["user_id"],))
     subscription = cursor.fetchone()
     
-    cursor.execute("SELECT * FROM subscription_plans WHERE target_audience = 'company' AND is_active = 1 ORDER BY monthly_price ASC")
+    cursor.execute("SELECT * FROM subscription_plans WHERE target_audience = 'company' AND is_active = TRUE ORDER BY monthly_price ASC")
     plans = cursor.fetchall()
     
     cursor.execute("SELECT * FROM payment_methods WHERE user_id = %s ORDER BY is_primary DESC, created_at DESC", (session["user_id"],))
@@ -1561,7 +1561,7 @@ def client_support():
 def index():
     db = get_db()
     cursor = get_db_cursor(db, dictionary=True)
-    cursor.execute("SELECT * FROM subscription_plans WHERE is_active = 1 ORDER BY monthly_price ASC")
+    cursor.execute("SELECT * FROM subscription_plans WHERE is_active = TRUE ORDER BY monthly_price ASC")
     plans = cursor.fetchall()
     db.close()
     return render_template("index.html", subscription_plans=plans)
@@ -1746,7 +1746,7 @@ def admin_suspend_user(user_id):
             return jsonify({"error": "User not found"}), 404
 
         # Suspend user
-        cursor.execute("UPDATE users SET is_active=0 WHERE id=%s", (user_id,))
+        cursor.execute("UPDATE users SET is_active=FALSE WHERE id=%s", (user_id,))
         
         db.commit()
         db.close()
@@ -1773,7 +1773,7 @@ def admin_unsuspend_user(user_id):
             return jsonify({"error": "User not found"}), 404
 
         # Unsuspend user
-        cursor.execute("UPDATE users SET is_active=1 WHERE id=%s", (user_id,))
+        cursor.execute("UPDATE users SET is_active=TRUE WHERE id=%s", (user_id,))
         
         db.commit()
         db.close()
@@ -2111,7 +2111,7 @@ def admin_suspend_company(company_id):
         # Suspend company user account
         cursor.execute("""
             UPDATE users 
-            SET is_active=0 
+            SET is_active=FALSE 
             WHERE email=(SELECT email FROM companies WHERE id=%s) AND role='company'
         """, (company_id,))
         
@@ -2140,7 +2140,7 @@ def admin_unsuspend_company(company_id):
         # Unsuspend company user account
         cursor.execute("""
             UPDATE users 
-            SET is_active=1 
+            SET is_active=TRUE 
             WHERE email=(SELECT email FROM companies WHERE id=%s) AND role='company'
         """, (company_id,))
         
