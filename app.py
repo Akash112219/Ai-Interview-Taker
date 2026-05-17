@@ -43,10 +43,17 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # Configure Upload Folder
-UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'profiles'), exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'documents'), exist_ok=True)
+if os.environ.get('VERCEL'):
+    UPLOAD_FOLDER = '/tmp/uploads'
+else:
+    UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(os.path.join(UPLOAD_FOLDER, 'profiles'), exist_ok=True)
+    os.makedirs(os.path.join(UPLOAD_FOLDER, 'documents'), exist_ok=True)
+except OSError as e:
+    print(f"Warning: Could not create upload directories: {e}")
 
 def handle_file_upload(file, roletype, name):
     if not file or file.filename == '':
