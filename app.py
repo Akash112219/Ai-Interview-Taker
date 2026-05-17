@@ -74,6 +74,11 @@ def handle_file_upload(file, roletype, name):
     file.save(upload_path)
     return f"/static/uploads/profiles/{filename}"
 
+@app.route('/static/uploads/<path:filename>')
+def serve_static_uploads(filename):
+    from flask import send_from_directory
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
 # =========================
 # DATABASE CONNECTION
 # =========================
