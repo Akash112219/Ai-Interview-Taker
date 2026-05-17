@@ -49,6 +49,11 @@ def handle_exception(e):
     import traceback
     return f"<pre>{traceback.format_exc()}</pre>", 500
 
+@app.errorhandler(405)
+def method_not_allowed(e):
+    from flask import request
+    return f"405 Method Not Allowed. You tried to access {request.url} using method {request.method}.", 405
+
 # Configure Upload Folder
 if os.environ.get('VERCEL'):
     UPLOAD_FOLDER = '/tmp/uploads'
