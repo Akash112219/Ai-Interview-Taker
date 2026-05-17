@@ -1,0 +1,682 @@
+{% extends 'layouts/dashboard-base.html' %}
+
+{% block content %}
+<style>
+    /* Add transition for prices */
+    .price-value { transition: all 0.3s ease; }
+    
+    /* Currency Select styling */
+    body:not(.light-mode) select.currency-select {
+        background-color: rgba(15, 23, 42, 0.8) !important;
+        color: #e2e8f0;
+        border-color: rgba(148, 163, 184, 0.2);
+    }
+    body.light-mode select.currency-select {
+        background-color: #f8fafc !important;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+</style>
+
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <section class="page-shell rounded-3xl border border-white/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-xl md:p-8" data-aos="fade-up">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <span class="iconify text-sm text-primary" data-icon="solar:wallet-bold-duotone"></span>
+                    Subscription Management
+                </p>
+                <h1 class="mt-4 text-3xl font-black tracking-tight text-dark md:text-4xl">Platform Subscriptions</h1>
+                <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">Create, edit, and manage custom subscription plans for individuals and specific corporate clients.</p>
+            </div>
+            
+            <div class="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
+                <!-- Currency Selector -->
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold text-slate-500">Currency:</span>
+                    <div class="relative">
+                        <select id="currencySelector" onchange="updateCurrency()" title="Select Currency" aria-label="Select Currency" class="currency-select appearance-none rounded-xl border py-2 pl-4 pr-10 text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <option value="USD" selected>USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="PKR">PKR (₨)</option>
+                        </select>
+                        <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="solar:alt-arrow-down-linear"></span>
+                    </div>
+                </div>
+
+                <button onclick="openPlanModal()" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-xl hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:add-circle-bold-duotone"></span>
+                    Create New Plan
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Billing Cycle Toggle -->
+    <div class="flex justify-end" data-aos="fade-up" data-aos-delay="50">
+        <div class="inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+            <button id="btnMonthlyView" onclick="toggleViewBilling('monthly')" type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all focus:outline-none">Monthly View</button>
+            <button id="btnYearlyView" onclick="toggleViewBilling('yearly')" type="button" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 transition-all hover:text-dark dark:hover:text-white focus:outline-none">Yearly View</button>
+        </div>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="grid gap-6 lg:grid-cols-3" data-aos="fade-up" data-aos-delay="100">
+        {% for plan in plans %}
+        <div class="relative flex flex-col justify-between rounded-3xl border {% if plan.target_audience == 'company' %}border-2 border-primary bg-white shadow-xl shadow-primary/5{% else %}border-slate-200 bg-white shadow-sm{% endif %} p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-xl">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full {% if plan.target_audience == 'company' %}bg-primary{% else %}bg-slate-800{% endif %} px-3 py-0.5 text-xs font-bold text-white shadow-sm">{{ plan.target_audience|upper }}</div>
+            <div>
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl {% if plan.target_audience == 'company' %}bg-primary text-white{% else %}bg-secondary text-primary{% endif %}">
+                            <span class="iconify text-2xl" data-icon="{% if plan.target_audience == 'company' %}solar:crown-star-bold-duotone{% else %}solar:user-bold-duotone{% endif %}"></span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-dark">{{ plan.name }}</h3>
+                            <p class="text-xs text-slate-500">{% if plan.target_audience == 'company' %}Corporate Plan{% else %}Individual Plan{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-2 mb-2 flex items-baseline gap-1">
+                    {% set m_price = plan.monthly_price | float %}
+                    {% set m_disc = plan.monthly_discount or 0 %}
+                    {% set discounted_m = (m_price * (1 - m_disc / 100.0)) | round(2) %}
+                    <span class="text-xl font-bold text-slate-400">$</span>
+                    <span class="price-display text-3xl font-black text-dark tracking-tight" data-monthly="{{ m_price }}" data-yearly="{{ plan.yearly_price | float }}">{{ "{:g}".format(discounted_m) }}</span>
+                    <span class="billing-period-display text-sm text-slate-500">/mo</span>
+                </div>
+                <div class="mb-6 flex gap-2 h-6">
+                    <span class="discount-display {% if m_disc == 0 %}hidden{% endif %} text-xs font-semibold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md" data-monthly-disc="{{ m_disc }}" data-yearly-disc="{{ plan.yearly_discount or 0 }}">Save {{ m_disc }}%</span>
+                </div>
+                
+                <div class="mb-8 flex-1 space-y-3 text-sm text-slate-600">
+                    {% for feature in plan.features.split(',') %}
+                    <div class="flex items-center gap-3">
+                        <span class="iconify text-primary" data-icon="solar:check-circle-bold"></span> {{ feature.strip() }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" data-plan="{{ plan|tojson|forceescape }}" onclick="openPlanModal(JSON.parse(this.dataset.plan))" class="flex-1 rounded-xl {% if plan.target_audience == 'company' %}bg-primary/10 text-primary hover:bg-primary/20{% else %}border border-slate-200 bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800{% endif %} py-3 font-semibold transition focus:outline-none focus:ring-4 focus:ring-primary/10">
+                    <span class="iconify inline mr-1" data-icon="solar:pen-new-square-linear"></span> Edit
+                </button>
+                <button type="button" data-id="{{ plan.id }}" data-name="{{ plan.name }}" onclick="deletePlan(this.dataset.id, this.dataset.name)" title="Delete Plan" aria-label="Delete Plan" class="rounded-xl border border-red-200 bg-transparent text-red-600 hover:bg-red-50 py-3 px-4 font-semibold transition focus:outline-none focus:ring-4 focus:ring-red-100">
+                    <span class="iconify text-lg" data-icon="solar:trash-bin-minimalistic-linear"></span>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not plans %}
+        <div class="lg:col-span-3 py-10 text-center text-slate-400 italic">No subscription plans found.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add / Edit Plan Modal Overlay -->
+<div id="planModalOverlay" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0 overflow-hidden">
+    <!-- Modal Content -->
+    <div id="planModal" class="relative w-full max-w-3xl max-h-[90vh] scale-95 rounded-3xl border border-white/20 bg-white/95 p-0 shadow-2xl transition-transform duration-300 flex flex-col overflow-hidden">
+        
+        <div class="flex items-start justify-between shrink-0 glass z-20 px-6 py-5 border-b border-slate-100 rounded-t-3xl bg-white/80">
+            <div>
+                <h2 id="modalTitle" class="text-2xl font-bold text-dark">Create New Plan</h2>
+                <p class="mt-1 text-sm text-slate-500">Configure subscription details, pricing, and features.</p>
+            </div>
+            <button type="button" onclick="closePlanModal()" title="Close modal" aria-label="Close modal" class="hover-subtle inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-500 transition-colors focus:outline-none">
+                <span class="iconify text-2xl" data-icon="solar:close-circle-bold-duotone"></span>
+            </button>
+        </div>
+
+        <!-- Scrollable Form Area -->
+        <div class="custom-scrollbar overflow-y-auto p-6 flex-1 bg-transparent">
+            <form id="planForm" class="space-y-8">
+                
+                <!-- General Info -->
+                <div>
+                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">General Information</h3>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Plan Name</label>
+                            <input type="text" id="pName" required class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="e.g. Starter Individual" />
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Target Audience</label>
+                            <div class="relative">
+                                <select id="pTarget" title="Target Audience" aria-label="Target Audience" required onchange="handleTargetChange()" class="appearance-none w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-4 pr-10 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
+                                    <option value="individual">Individual Client</option>
+                                    <option value="company">Companies</option>
+                                </select>
+                                <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="solar:alt-arrow-down-linear"></span>
+                            </div>
+                        </div>
+                        <div id="companySelectWrapper" class="hidden md:col-span-2">
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Specific Company</label>
+                            <div class="relative">
+                                <select id="pCompany" title="Specific Company" aria-label="Specific Company" class="appearance-none w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-4 pr-10 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
+                                    <option value="all">All Companies (General Plan)</option>
+                                    {% for comp in companies %}
+                                    <option value="{{ comp.id }}">{{ comp.company_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="solar:alt-arrow-down-linear"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing -->
+                <div>
+                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Pricing & Discounts</h3>
+                    <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                        <!-- Monthly Base -->
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Monthly Price ($)</label>
+                            <input type="number" id="pMonthlyPrice" required min="0" step="0.01" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="29" />
+                        </div>
+                        <!-- Monthly Discount -->
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Mo. Discount (%)</label>
+                            <input type="number" id="pMonthlyDisc" required min="0" max="100" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="0" />
+                        </div>
+                        <!-- Yearly Base -->
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Yearly Price ($)</label>
+                            <input type="number" id="pYearlyPrice" required min="0" step="0.01" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="290" />
+                        </div>
+                        <!-- Yearly Discount -->
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-red-500 uppercase">Yr. Discount (%)</label>
+                            <input type="number" id="pYearlyDisc" required min="0" max="100" class="w-full rounded-xl border border-slate-200 dark:border-red-500/50 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-red-500 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="20" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promotions -->
+                <div>
+                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Promotion Tags</h3>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Monthly Tag (Optional)</label>
+                            <input type="text" id="pMonthlyPromo" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="e.g. Most Popular" />
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Yearly Tag (Optional)</label>
+                            <input type="text" id="pYearlyPromo" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="e.g. Best Value" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features -->
+                <div>
+                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Provided Facilities</h3>
+                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase">Description (Comma Separated)</label>
+                    <textarea id="pFeatures" required rows="4" class="custom-scrollbar w-full resize-none rounded-xl border border-slate-200 bg-transparent py-3 px-4 text-sm font-semibold text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Unlimited Users, Custom Branding, Dedicated Support..."></textarea>
+                    <p class="mt-2 text-xs text-slate-500">Each comma separated item will be displayed as a checkmark point in the plan card.</p>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Modal Actions Footer -->
+        <div class="shrink-0 flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 p-6 rounded-b-3xl">
+            <button type="button" onclick="closePlanModal()" class="hover-subtle rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus:outline-none">Cancel</button>
+            <button type="button" onclick="savePlan()" class="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                <span class="iconify text-lg" data-icon="solar:diskette-bold-duotone"></span> Save Plan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Plan Modal Overlay -->
+<div id="deletePlanOverlay" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0 overflow-hidden">
+    <!-- Modal Content -->
+    <div id="deletePlanModal" class="relative w-full max-w-sm scale-95 rounded-3xl border border-white/20 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-transform duration-300 text-center">
+        <!-- Cross Icon -->
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 text-red-500">
+            <span class="iconify text-3xl" data-icon="solar:close-circle-bold"></span>
+        </div>
+        
+        <h3 class="mb-2 text-xl font-bold text-slate-800 dark:text-white">Delete Subscription?</h3>
+        <p class="mb-6 text-sm text-slate-500 dark:text-slate-400">
+            Are you sure you want to delete the <span id="deletePlanName" class="font-bold text-slate-700 dark:text-slate-300"></span> plan? This action cannot be undone.
+        </p>
+        
+        <div class="flex gap-3">
+            <button type="button" onclick="closeDeletePlanModal()" class="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+            <button type="button" id="confirmDeletePlanBtn" class="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-600 transition-colors">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Action Progress Toast -->
+<div id="actionToast" class="fixed bottom-6 right-6 z-50 flex hidden items-center gap-4 rounded-2xl border border-white/10 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 translate-y-10 opacity-0">
+    <div id="toastIconContainer" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
+        <span id="toastIcon" class="iconify text-xl animate-spin" data-icon="solar:spinner-linear"></span>
+    </div>
+    <div>
+        <h4 id="toastTitle" class="text-sm font-bold text-white">Processing</h4>
+        <p id="toastDesc" class="mt-0.5 text-xs text-slate-300">Saving subscription details...</p>
+    </div>
+</div>
+
+<script>
+    let currentView = 'monthly';
+    let currentEditingPlanId = null;
+    const currencyRates = {
+        'USD': { symbol: '$', rate: 1 },
+        'EUR': { symbol: '€', rate: 0.92 },
+        'GBP': { symbol: '£', rate: 0.79 },
+        'PKR': { symbol: '₨', rate: 278.50 }
+    };
+
+    function calculatePrice(basePrice, discountPercentage = 0) {
+        const currency = document.getElementById('currencySelector').value;
+        const rateInfo = currencyRates[currency];
+        
+        let finalPrice = basePrice * rateInfo.rate;
+        if (discountPercentage > 0) {
+            finalPrice = finalPrice * (1 - (discountPercentage / 100));
+        }
+        return finalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function updateCurrency() {
+        toggleViewBilling(currentView);
+    }
+
+    function toggleViewBilling(cycle) {
+        currentView = cycle;
+        const btnM = document.getElementById('btnMonthlyView');
+        const btnY = document.getElementById('btnYearlyView');
+        
+        if(cycle === 'monthly') {
+            btnM.className = 'rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all focus:outline-none';
+            btnY.className = 'rounded-lg px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 transition-all hover:text-dark dark:hover:text-white focus:outline-none';
+        } else {
+            btnY.className = 'rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all focus:outline-none';
+            btnM.className = 'rounded-lg px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 transition-all hover:text-dark dark:hover:text-white focus:outline-none';
+        }
+        
+        // Currency symbol update
+        const currency = document.getElementById('currencySelector').value;
+        const rateInfo = currencyRates[currency];
+        document.querySelectorAll('.text-xl.font-bold.text-slate-400').forEach(el => el.textContent = rateInfo.symbol);
+
+        // Update all prices in cards
+        const priceDisplays = document.querySelectorAll('.price-display');
+        const discountDisplays = document.querySelectorAll('.discount-display');
+        
+        priceDisplays.forEach((el, index) => {
+            let basePrice = cycle === 'monthly' ? el.getAttribute('data-monthly') : el.getAttribute('data-yearly');
+            
+            let discount = 0;
+            if (discountDisplays[index]) {
+                discount = cycle === 'monthly' 
+                    ? discountDisplays[index].getAttribute('data-monthly-disc') 
+                    : discountDisplays[index].getAttribute('data-yearly-disc');
+            }
+            
+            el.textContent = calculatePrice(basePrice, parseFloat(discount || 0));
+        });
+
+        // Update periods
+        document.querySelectorAll('.billing-period-display').forEach(el => {
+            el.textContent = cycle === 'monthly' ? '/mo' : '/yr';
+        });
+
+        // Update discounts
+        document.querySelectorAll('.discount-display').forEach(el => {
+            const disc = cycle === 'monthly' ? el.getAttribute('data-monthly-disc') : el.getAttribute('data-yearly-disc');
+            el.textContent = `${disc}% Discount`;
+            if (parseInt(disc) === 0) {
+                el.classList.add('hidden');
+            } else {
+                el.classList.remove('hidden');
+            }
+        });
+
+        // Update promo tags
+        document.querySelectorAll('.monthly-promo').forEach(el => cycle === 'monthly' && el.textContent.trim() !== '' ? el.classList.remove('hidden') : el.classList.add('hidden'));
+        document.querySelectorAll('.yearly-promo').forEach(el => cycle === 'yearly' && el.textContent.trim() !== '' ? el.classList.remove('hidden') : el.classList.add('hidden'));
+    }
+
+    // Modal Logic
+    const planOverlay = document.getElementById('planModalOverlay');
+    const planModal = document.getElementById('planModal');
+
+    function handleTargetChange() {
+        const t = document.getElementById('pTarget').value;
+        const cw = document.getElementById('companySelectWrapper');
+        if (t === 'company') {
+            cw.classList.remove('hidden');
+        } else {
+            cw.classList.add('hidden');
+        }
+    }
+
+    function openPlanModal(data = null) {
+        document.getElementById('planForm').reset();
+        currentEditingPlanId = null;
+        
+        if (data) {
+            currentEditingPlanId = data.id;
+            document.getElementById('modalTitle').textContent = 'Edit Plan';
+            document.getElementById('pName').value = data.name;
+            document.getElementById('pTarget').value = data.target_audience;
+            handleTargetChange();
+            if (data.target_audience === 'company') document.getElementById('pCompany').value = data.company_id || 'all';
+            
+            document.getElementById('pMonthlyPrice').value = data.monthly_price;
+            document.getElementById('pYearlyPrice').value = data.yearly_price;
+            document.getElementById('pMonthlyDisc').value = data.monthly_discount || 0;
+            document.getElementById('pYearlyDisc').value = data.yearly_discount || 0;
+            document.getElementById('pMonthlyPromo').value = data.monthly_promo || '';
+            document.getElementById('pYearlyPromo').value = data.yearly_promo || '';
+            document.getElementById('pFeatures').value = data.features;
+        } else {
+            document.getElementById('modalTitle').textContent = 'Create New Plan';
+            handleTargetChange();
+        }
+
+        planOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            planOverlay.classList.remove('opacity-0');
+            planOverlay.classList.add('opacity-100');
+            planModal.classList.remove('scale-95');
+            planModal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function closePlanModal() {
+        planOverlay.classList.remove('opacity-100');
+        planOverlay.classList.add('opacity-0');
+        planModal.classList.remove('scale-100');
+        planModal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            planOverlay.classList.add('hidden');
+            document.getElementById('planForm').reset();
+        }, 300);
+    }
+
+    planOverlay.addEventListener('click', function(e) {
+        if (e.target === planOverlay) closePlanModal();
+    });
+
+    function savePlan() {
+        // Validation check
+        const name = document.getElementById('pName').value;
+        const target = document.getElementById('pTarget').value;
+        const monthlyPrice = document.getElementById('pMonthlyPrice').value;
+        const yearlyPrice = document.getElementById('pYearlyPrice').value;
+        const features = document.getElementById('pFeatures').value;
+        
+        if (!name || !monthlyPrice || !yearlyPrice || !features) {
+            alert("Please fill out all required fields.");
+            return;
+        }
+
+        // Show loading toast
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+        
+        toastIcon.setAttribute('data-icon', 'solar:spinner-linear');
+        toastIcon.classList.add('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400';
+        toastTitle.textContent = 'Saving Plan';
+        toastDesc.textContent = 'Updating records...';
+        
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }, 20);
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('target_audience', target);
+        formData.append('monthly_price', monthlyPrice);
+        formData.append('yearly_price', yearlyPrice);
+        formData.append('features', features);
+
+        // Determine if this is an update or create
+        const isEdit = document.getElementById('modalTitle').textContent === 'Edit Plan';
+        const url = isEdit ? `/admin/subscription-plans/update/${currentEditingPlanId}` : '/admin/subscription-plans/create';
+        const method = isEdit ? 'POST' : 'POST';
+
+        // Make API call
+        fetch(url, {
+            method: method,
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closePlanModal();
+                
+                // Show success toast
+                toastIcon.setAttribute('data-icon', 'solar:check-circle-linear');
+                toastIcon.classList.remove('animate-spin');
+                iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400';
+                toastTitle.textContent = 'Plan Saved!';
+                toastDesc.textContent = 'The subscription plan has been successfully updated.';
+                
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-10', 'opacity-0');
+                    setTimeout(() => { 
+                        toast.classList.add('hidden');
+                        // Reload page to show updated data
+                        window.location.reload();
+                    }, 500);
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Failed to save plan');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            
+            // Show error toast
+            toastIcon.setAttribute('data-icon', 'solar:close-circle-linear');
+            toastIcon.classList.remove('animate-spin');
+            iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400';
+            toastTitle.textContent = 'Error!';
+            toastDesc.textContent = error.message || 'Failed to save subscription plan.';
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => { toast.classList.add('hidden'); }, 500);
+            }, 3000);
+        });
+    }
+
+    const deletePlanOverlay = document.getElementById('deletePlanOverlay');
+    const deletePlanModal = document.getElementById('deletePlanModal');
+    let planToDeleteId = null;
+
+    function openDeletePlanModal(id, name) {
+        planToDeleteId = id;
+        document.getElementById('deletePlanName').textContent = name;
+        
+        deletePlanOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            deletePlanOverlay.classList.remove('opacity-0');
+            deletePlanOverlay.classList.add('opacity-100');
+            deletePlanModal.classList.remove('scale-95');
+            deletePlanModal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function closeDeletePlanModal() {
+        deletePlanOverlay.classList.remove('opacity-100');
+        deletePlanOverlay.classList.add('opacity-0');
+        deletePlanModal.classList.remove('scale-100');
+        deletePlanModal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            deletePlanOverlay.classList.add('hidden');
+            planToDeleteId = null;
+        }, 300);
+    }
+
+    document.getElementById('confirmDeletePlanBtn').addEventListener('click', function() {
+        if (!planToDeleteId) return;
+        closeDeletePlanModal();
+        performDeletePlan(planToDeleteId);
+    });
+
+    function deletePlan(planId, planName) {
+        openDeletePlanModal(planId, planName);
+    }
+
+    function performDeletePlan(planId) {
+
+        // Show loading toast
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+        
+        toastIcon.setAttribute('data-icon', 'solar:spinner-linear');
+        toastIcon.classList.add('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400';
+        toastTitle.textContent = 'Deleting Plan';
+        toastDesc.textContent = 'Removing subscription plan...';
+        
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }, 20);
+
+        // Make API call
+        fetch(`/admin/subscription-plans/delete/${planId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success toast
+                toastIcon.setAttribute('data-icon', 'solar:check-circle-linear');
+                toastIcon.classList.remove('animate-spin');
+                iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400';
+                toastTitle.textContent = 'Plan Deleted!';
+                toastDesc.textContent = 'The subscription plan has been successfully removed.';
+                
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-10', 'opacity-0');
+                    setTimeout(() => { 
+                        toast.classList.add('hidden');
+                        // Reload page to show updated data
+                        window.location.reload();
+                    }, 500);
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Failed to delete plan');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            
+            // Show error toast
+            toastIcon.setAttribute('data-icon', 'solar:close-circle-linear');
+            toastIcon.classList.remove('animate-spin');
+            iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-200/20 text-red-400';
+            toastTitle.textContent = 'Error!';
+            toastDesc.textContent = error.message || 'Failed to delete subscription plan.';
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => { toast.classList.add('hidden'); }, 500);
+            }, 3000);
+        });
+    }
+
+    function toggleViewBilling(type) {
+        const btnMonthly = document.getElementById('btnMonthlyView');
+        const btnYearly = document.getElementById('btnYearlyView');
+        const prices = document.querySelectorAll('.price-display');
+        const periods = document.querySelectorAll('.billing-period-display');
+        const discounts = document.querySelectorAll('.discount-display');
+        
+        const activeClass = ['bg-primary', 'font-bold', 'text-white', 'shadow-sm'];
+        const inactiveClass = ['font-medium', 'text-slate-500', 'dark:text-slate-400', 'hover:text-dark', 'dark:hover:text-white'];
+        
+        if (type === 'monthly') {
+            btnMonthly.classList.add(...activeClass);
+            btnMonthly.classList.remove(...inactiveClass);
+            btnYearly.classList.add(...inactiveClass);
+            btnYearly.classList.remove(...activeClass);
+            
+            prices.forEach((p, index) => {
+                const d = discounts[index];
+                let disc = d.getAttribute('data-monthly-disc');
+                disc = (disc && disc !== 'None') ? parseFloat(disc) : 0;
+                let originalPrice = parseFloat(p.getAttribute('data-monthly'));
+                let finalPrice = originalPrice * (1 - disc / 100);
+                // remove trailing zeros if any
+                p.innerHTML = parseFloat(finalPrice.toFixed(2));
+            });
+            periods.forEach(p => p.innerHTML = '/mo');
+            discounts.forEach(d => {
+                const disc = d.getAttribute('data-monthly-disc');
+                if(disc && disc !== '0' && disc !== 'None') {
+                    d.classList.remove('hidden');
+                    d.innerHTML = 'Save ' + disc + '%';
+                } else {
+                    d.classList.add('hidden');
+                }
+            });
+        } else {
+            btnYearly.classList.add(...activeClass);
+            btnYearly.classList.remove(...inactiveClass);
+            btnMonthly.classList.add(...inactiveClass);
+            btnMonthly.classList.remove(...activeClass);
+            
+            prices.forEach((p, index) => {
+                const d = discounts[index];
+                let disc = d.getAttribute('data-yearly-disc');
+                disc = (disc && disc !== 'None') ? parseFloat(disc) : 0;
+                let originalPrice = parseFloat(p.getAttribute('data-yearly'));
+                let finalPrice = originalPrice * (1 - disc / 100);
+                p.innerHTML = parseFloat(finalPrice.toFixed(2));
+            });
+            periods.forEach(p => p.innerHTML = '/yr');
+            discounts.forEach(d => {
+                const disc = d.getAttribute('data-yearly-disc');
+                if(disc && disc !== '0' && disc !== 'None') {
+                    d.classList.remove('hidden');
+                    d.innerHTML = 'Save ' + disc + '%';
+                } else {
+                    d.classList.add('hidden');
+                }
+            });
+        }
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+    });
+</script>
+{% endblock %}

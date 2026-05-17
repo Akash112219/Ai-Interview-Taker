@@ -1,0 +1,464 @@
+{% extends 'layouts/dashboard-base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <section class="page-shell rounded-3xl border border-white/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-xl md:p-8" data-aos="fade-up">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <span class="iconify text-sm text-primary" data-icon="solar:help-bold-duotone"></span>
+                    Help Desk
+                </p>
+                <h1 class="mt-4 text-3xl font-black tracking-tight text-dark md:text-4xl">Client Support</h1>
+                <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">Track, manage, and reply to your raised support queries or create a new request for assistance.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="openCreateModal()" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-xl hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:check-read-bold-duotone"></span>
+                    Create Ticket
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support Tickets Table -->
+    <section class="rounded-3xl border border-white/10 bg-white/80 p-6 shadow-sm backdrop-blur-xl" data-aos="fade-up" data-aos-delay="100">
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
+            <h2 class="text-xl font-bold text-dark">Active Tickets</h2>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-100 bg-white">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-transparent text-slate-500">
+                        <th class="px-5 py-4 font-semibold uppercase tracking-wider">Ticket Info</th>
+                        <th class="px-5 py-4 font-semibold uppercase tracking-wider">Status</th>
+                        <th class="px-5 py-4 font-semibold uppercase tracking-wider">Date Raised</th>
+                        <th class="px-5 py-4 text-right font-semibold uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for ticket in tickets %}
+                    <tr class="group transition-colors hover-row">
+                        <td class="whitespace-nowrap px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-primary font-bold shadow-sm">
+                                    #{{ ticket.id }}
+                                </div>
+                                <div class="max-w-xs">
+                                    <p class="font-semibold text-dark truncate">{{ ticket.subject }}</p>
+                                    <p class="text-xs text-slate-500 truncate mt-0.5" title="{{ ticket.message }}">{{ ticket.message }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-4">
+                            <span class="inline-flex items-center gap-1.5 rounded-full {% if ticket.status == 'resolved' %}bg-emerald-100 text-emerald-700{% elif ticket.status == 'pending' %}bg-amber-100 text-amber-700{% else %}bg-blue-100 text-blue-700{% endif %} px-3 py-1 text-xs font-bold">
+                                <span class="h-1.5 w-1.5 rounded-full {% if ticket.status == 'resolved' %}bg-emerald-500{% elif ticket.status == 'pending' %}bg-amber-500{% else %}bg-blue-500{% endif %}"></span> {{ ticket.status | title }}
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap px-5 py-4 text-slate-600 font-medium">{{ ticket.created_at.strftime('%b %d, %Y') if ticket.created_at else 'N/A' }}</td>
+                        <td class="whitespace-nowrap px-5 py-4 text-right">
+                            <button onclick="openEditModal('#{{ ticket.id }}', '{{ ticket.subject }}', '{{ user.first_name }} {{ user.last_name }}', '{{ user.email }}', '{{ ticket.message }}', '{{ ticket.status }}', false)" class="hover-btn inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent border border-transparent text-slate-400 transition-all focus:outline-none" title="View / Reply">
+                                <span class="iconify text-lg" data-icon="solar:pen-new-square-linear"></span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not tickets %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center">
+                            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+                                <span class="iconify text-3xl" data-icon="solar:help-bold-duotone"></span>
+                            </div>
+                            <h3 class="text-lg font-bold text-dark">No Active Tickets</h3>
+                            <p class="mt-1 text-sm text-slate-500">Need help? Create a ticket and our team will get back to you.</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Create Ticket Modal Overlay -->
+<div id="createModalOverlay" class="custom-scrollbar fixed inset-0 z-50 flex hidden items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0">
+    <div id="createModal" class="custom-scrollbar relative w-full max-w-lg max-h-[90vh] overflow-y-auto scale-95 rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl transition-transform duration-300 md:p-8">
+        
+        <div class="mb-6 flex items-start justify-between sticky top-0 glass z-20 -mx-2 px-2 pb-4 pt-2 rounded-t-xl">
+            <div>
+                <h2 class="text-2xl font-bold text-dark">Create Support Ticket</h2>
+                <p class="mt-1 text-sm text-slate-500">Submit a new request to our help desk.</p>
+            </div>
+            <button type="button" onclick="closeCreateModal()" title="Close modal" aria-label="Close modal" class="hover-subtle inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-500 transition-colors focus:outline-none">
+                <span class="iconify text-2xl" data-icon="solar:close-circle-bold-duotone"></span>
+            </button>
+        </div>
+
+        <form id="createTicketForm" class="space-y-4">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Auto Selected Name -->
+                <div>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Name</label>
+                    <input type="text" readonly value="{{ user.first_name }} {{ user.last_name }}" title="Auto Selected Name" aria-label="Name" class="w-full rounded-xl border border-slate-200 bg-secondary py-2.5 px-3 text-sm font-bold text-slate-600 opacity-80 cursor-not-allowed focus:outline-none" />
+                </div>
+                <!-- Auto Selected Email -->
+                <div>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Email Address</label>
+                    <input type="email" readonly value="{{ user.email }}" title="Auto Selected Email" aria-label="Email Address" class="w-full rounded-xl border border-slate-200 bg-secondary py-2.5 px-3 text-sm font-bold text-slate-600 opacity-80 cursor-not-allowed focus:outline-none" />
+                </div>
+            </div>
+
+            <!-- Subject -->
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">Subject</label>
+                <div class="relative">
+                    <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="solar:text-field-linear"></span>
+                    <input type="text" id="ticketSubject" required title="Ticket Subject" aria-label="Ticket Subject" class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-10 pr-4 text-sm text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Briefly describe your issue" />
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">Message Body</label>
+                <textarea required id="ticketBody" aria-label="Ticket Body" rows="4" class="custom-scrollbar w-full resize-none rounded-xl border border-slate-200 bg-transparent py-3 px-4 text-sm text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Provide detailed information about the issue you are facing..."></textarea>
+            </div>
+
+            <!-- Upload Image -->
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">Attach Image (Optional)</label>
+                <div class="relative flex w-full items-center rounded-xl border border-dashed border-slate-300 bg-transparent transition hover-row cursor-pointer">
+                    <span class="iconify absolute left-4 text-slate-400 pointer-events-none" data-icon="solar:camera-linear"></span>
+                    <input type="file" id="ticketImage" title="Upload Attachment" aria-label="Upload Attachment" accept="image/*" class="w-full pl-10 py-1.5 text-xs text-slate-600 file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:font-semibold file:text-primary hover:file:bg-primary/20 focus:outline-none" onchange="previewNewTicketImage(this)" />
+                </div>
+                <!-- Image Preview Section -->
+                <div id="newTicketImgPreviewWrapper" class="mt-3 hidden rounded-xl border border-slate-200 bg-transparent p-2 text-center shadow-[inset_0_2px_10px_rgba(15,23,42,0.02)]">
+                    <img id="newTicketImgPreview" src="" alt="Selected attachment preview" class="max-h-32 rounded-lg mx-auto object-cover" />
+                </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+                <button type="button" onclick="closeCreateModal()" class="hover-subtle rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus:outline-none">Cancel</button>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:plain-2-linear"></span> Submit Ticket
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View / Edit Ticket Modal Overlay -->
+<div id="editModalOverlay" class="custom-scrollbar fixed inset-0 z-50 flex hidden items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0">
+    <div id="editModal" class="custom-scrollbar relative w-full max-w-xl max-h-[90vh] overflow-y-auto scale-95 rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl transition-transform duration-300 md:p-8">
+        
+        <div class="mb-6 flex items-start justify-between sticky top-0 glass z-20 -mx-2 px-2 pb-4 pt-2 rounded-t-xl">
+            <div>
+                <h2 class="text-2xl font-bold text-dark flex items-center gap-2">Ticket <span id="vTicketId" class="text-primary">#00</span></h2>
+                <p class="mt-1 text-sm text-slate-500">Edit status, view details, and reply.</p>
+            </div>
+            <button type="button" onclick="closeEditModal()" title="Close modal" aria-label="Close modal" class="hover-subtle inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-500 transition-colors focus:outline-none">
+                <span class="iconify text-2xl" data-icon="solar:close-circle-bold-duotone"></span>
+            </button>
+        </div>
+
+        <form id="editTicketForm" class="space-y-5">
+            
+            <!-- Read-only Details Panel -->
+            <div class="rounded-xl border border-slate-200 bg-secondary px-5 py-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="block text-xs font-bold uppercase tracking-wider text-slate-400">Raised By</span>
+                        <span id="vTicketName" class="mt-1 block font-semibold text-slate-800">Name</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs font-bold uppercase tracking-wider text-slate-400">Email Address</span>
+                        <span id="vTicketEmail" class="mt-1 block text-sm font-medium text-slate-600">Email</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200/50">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Subject</span>
+                    <span id="vTicketSubject" class="block font-bold text-dark">Subject</span>
+                </div>
+            </div>
+
+            <!-- Original Message Body -->
+            <div>
+                <label class="mb-1.5 flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <span class="iconify text-slate-400" data-icon="solar:chat-line-linear"></span> Problem Description
+                </label>
+                <div class="rounded-xl border border-slate-200 bg-transparent p-4 shadow-[inset_0_2px_10px_rgba(15,23,42,0.02)] text-sm leading-relaxed text-slate-700" id="vTicketBody">
+                    Message Body
+                </div>
+            </div>
+
+            <!-- Attached Image Preview -->
+            <div id="vTicketAttachmentWrapper" class="hidden">
+                <label class="mb-1.5 flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <span class="iconify text-slate-400" data-icon="solar:gallery-linear"></span> Attached User Image
+                </label>
+                <div class="rounded-xl border border-slate-200 bg-transparent p-2 text-center shadow-[inset_0_2px_10px_rgba(15,23,42,0.02)]">
+                    <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=60" alt="Ticket Attachment" class="max-h-48 rounded-lg mx-auto object-cover cursor-pointer hover:opacity-90 transition" />
+                </div>
+            </div>
+
+            <!-- Admin Reply Area -->
+            <div class="border-t border-slate-200 pt-5 mt-5">
+                <label class="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <span class="iconify text-primary" data-icon="solar:pen-new-square-linear"></span> Support Reply
+                </label>
+                <textarea id="replyText" rows="3" required title="Reply to Support Ticket" aria-label="Reply to Ticket" class="custom-scrollbar w-full resize-none rounded-xl border border-slate-200 bg-transparent py-3 px-4 text-sm text-slate-800 transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Type your response to the inquiry..."></textarea>
+            </div>
+
+            <!-- Change Status -->
+            <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-secondary p-4 opacity-90">
+                <div>
+                    <span class="block text-sm font-bold text-slate-700">Ticket Status</span>
+                    <span class="text-xs text-slate-500">Update the current resolution phase.</span>
+                </div>
+                <select id="vTicketStatus" title="Update Status" aria-label="Update Status" class="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm font-bold text-dark shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="open">Open</option>
+                    <option value="pending">Pending</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+                <button type="button" onclick="closeEditModal()" class="hover-subtle rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus:outline-none">Cancel</button>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:check-read-bold-duotone"></span> Update & Reply
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Action Progress Toast -->
+<div id="actionToast" class="fixed bottom-6 right-6 z-50 flex hidden items-center gap-4 rounded-2xl border border-white/10 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 translate-y-10 opacity-0">
+    <div id="toastIconContainer" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
+        <span id="toastIcon" class="iconify text-xl animate-spin" data-icon="solar:spinner-linear"></span>
+    </div>
+    <div>
+        <h4 id="toastTitle" class="text-sm font-bold text-white">Sending Reply</h4>
+        <p id="toastDesc" class="mt-0.5 text-xs text-slate-300">Transmitting to user...</p>
+    </div>
+</div>
+
+<script>
+    // Create Ticket Modal Logic
+    const createOverlay = document.getElementById('createModalOverlay');
+    const createModal = document.getElementById('createModal');
+
+    function openCreateModal() {
+        document.getElementById('createTicketForm').reset();
+        document.getElementById('newTicketImgPreviewWrapper').classList.add('hidden');
+        document.getElementById('newTicketImgPreview').src = '';
+        
+        createOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            createOverlay.classList.remove('opacity-0');
+            createOverlay.classList.add('opacity-100');
+            createModal.classList.remove('scale-95');
+            createModal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function closeCreateModal() {
+        createOverlay.classList.remove('opacity-100');
+        createOverlay.classList.add('opacity-0');
+        createModal.classList.remove('scale-100');
+        createModal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            createOverlay.classList.add('hidden');
+        }, 300);
+    }
+
+    createOverlay.addEventListener('click', function(e) {
+        if (e.target === createOverlay) closeCreateModal();
+    });
+
+    document.getElementById('createTicketForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const subject = document.getElementById('ticketSubject').value;
+        const message = document.getElementById('ticketBody').value;
+        
+        const formData = new FormData();
+        formData.append('subject', subject);
+        formData.append('message', message);
+        
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+        
+        // Set loading state
+        toastIcon.setAttribute('data-icon', 'solar:spinner-linear');
+        toastIcon.classList.add('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400';
+        toastTitle.textContent = 'Submitting Ticket';
+        toastDesc.textContent = 'Sending your request to help desk...';
+        
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }, 20);
+
+        try {
+            const response = await fetch('/api/support/ticket/create', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.success) {
+                toastIcon.setAttribute('data-icon', 'solar:check-circle-linear');
+                toastIcon.classList.remove('animate-spin');
+                iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400';
+                toastTitle.textContent = 'Success';
+                toastDesc.textContent = 'Ticket created successfully.';
+                
+                setTimeout(() => {
+                    closeCreateModal();
+                    location.reload();
+                }, 1500);
+            } else {
+                alert('Error: ' + data.error);
+                toast.classList.add('hidden');
+            }
+        } catch (error) {
+            alert('Failed to create ticket.');
+            toast.classList.add('hidden');
+        }
+    });
+
+    // Handle New Image Preview for Create Ticket
+    function previewNewTicketImage(input) {
+        const previewWrap = document.getElementById('newTicketImgPreviewWrapper');
+        const previewImg = document.getElementById('newTicketImgPreview');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewWrap.classList.remove('hidden');
+            }
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            previewWrap.classList.add('hidden');
+        }
+    }
+
+
+    // Edit / View Ticket Modal Logic
+    const editOverlay = document.getElementById('editModalOverlay');
+    const editModal = document.getElementById('editModal');
+
+    function openEditModal(ticketId, subject, name, email, body, status, hasAttachment) {
+        document.getElementById('editTicketForm').reset();
+        
+        document.getElementById('vTicketId').textContent = ticketId;
+        document.getElementById('vTicketSubject').textContent = subject;
+        document.getElementById('vTicketName').textContent = name;
+        document.getElementById('vTicketEmail').textContent = email;
+        document.getElementById('vTicketBody').textContent = body;
+        document.getElementById('vTicketStatus').value = status;
+        
+        const attachWrap = document.getElementById('vTicketAttachmentWrapper');
+        if (hasAttachment) {
+            attachWrap.classList.remove('hidden');
+        } else {
+            attachWrap.classList.add('hidden');
+        }
+
+        editOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            editOverlay.classList.remove('opacity-0');
+            editOverlay.classList.add('opacity-100');
+            editModal.classList.remove('scale-95');
+            editModal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function closeEditModal() {
+        editOverlay.classList.remove('opacity-100');
+        editOverlay.classList.add('opacity-0');
+        editModal.classList.remove('scale-100');
+        editModal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            editOverlay.classList.add('hidden');
+        }, 300);
+    }
+
+    editOverlay.addEventListener('click', function(e) {
+        if (e.target === editOverlay) closeEditModal();
+    });
+
+    document.getElementById('editTicketForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const ticketId = document.getElementById('vTicketId').textContent.replace('#', '');
+        const reply = document.getElementById('replyText').value;
+        const status = document.getElementById('vTicketStatus').value;
+        
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+        
+        // Set loading state
+        toastIcon.setAttribute('data-icon', 'solar:spinner-linear');
+        toastIcon.classList.add('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400';
+        toastTitle.textContent = 'Sending Reply';
+        toastDesc.textContent = 'Transmitting securely...';
+        
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }, 20);
+
+        try {
+            const response = await fetch('/api/support/ticket/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticket_id: ticketId,
+                    reply: reply,
+                    status: status
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                toastIcon.setAttribute('data-icon', 'solar:check-circle-linear');
+                toastIcon.classList.remove('animate-spin');
+                iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400';
+                toastTitle.textContent = 'Success';
+                toastDesc.textContent = data.message;
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                alert('Error: ' + data.error);
+                toast.classList.add('hidden');
+            }
+        } catch (error) {
+            alert('Failed to send reply.');
+            toast.classList.add('hidden');
+        }
+    });
+
+</script>
+{% endblock %}

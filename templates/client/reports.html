@@ -1,0 +1,86 @@
+{% extends 'layouts/dashboard-base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <section class="page-shell rounded-3xl border border-white/10 bg-white/80 p-6 shadow-sm backdrop-blur-xl md:p-8" data-aos="fade-up">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <span class="iconify text-sm text-primary" data-icon="solar:document-bold-duotone"></span>
+                    Performance Archives
+                </p>
+                <h1 class="mt-4 text-3xl font-black tracking-tight text-dark md:text-4xl">Interview Reports</h1>
+                <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">Access detailed performance analytics, AI feedback, and scoring breakdowns for all your completed interview sessions.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reports Grid/List -->
+    <section class="rounded-3xl border border-white/10 bg-white/80 p-6 shadow-sm backdrop-blur-xl" data-aos="fade-up" data-aos-delay="100">
+        <div class="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+            <h2 class="text-lg font-bold text-dark flex items-center gap-2">
+                <span class="iconify text-primary" data-icon="solar:checklist-minimalistic-bold-duotone"></span> 
+                Completed Sessions
+            </h2>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400">
+                        <th class="pb-3 text-xs font-bold uppercase tracking-widest">Interview Role</th>
+                        <th class="pb-3 text-xs font-bold uppercase tracking-widest">Date</th>
+                        <th class="pb-3 text-xs font-bold uppercase tracking-widest">Score</th>
+                        <th class="pb-3 text-xs font-bold uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for report in reports %}
+                    <tr class="hover-row transition">
+                        <td class="py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary font-bold text-sm uppercase">
+                                    {{ report.target_role[0:2]|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800">{{ report.target_role }}</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Reference #{{ report.id }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 text-slate-600 font-medium">{{ report.created_at.strftime('%B %d, %Y') if report.created_at else 'N/A' }}</td>
+                        <td class="py-4">
+                            <span class="inline-flex items-center gap-1 rounded-full {% if report.overall_score >= 80 %}bg-emerald-50 border-emerald-200 text-emerald-600{% elif report.overall_score >= 60 %}bg-amber-50 border-amber-200 text-amber-600{% else %}bg-rose-50 border-rose-200 text-rose-600{% endif %} px-3 py-1 text-xs font-bold border">
+                                {{ report.overall_score }}%
+                            </span>
+                        </td>
+                        <td class="py-4 text-right">
+                            <button class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-primary shadow-sm transition hover:bg-primary hover:text-white" title="View Full Report">
+                                <span class="iconify text-lg" data-icon="solar:eye-bold-duotone"></span>
+                            </button>
+                            <button class="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 shadow-sm transition hover:bg-slate-50" title="Download PDF">
+                                <span class="iconify text-lg" data-icon="solar:download-bold-duotone"></span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not reports %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center">
+                            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+                                <span class="iconify text-3xl" data-icon="solar:document-text-bold-duotone"></span>
+                            </div>
+                            <h3 class="text-lg font-bold text-dark">No Reports Found</h3>
+                            <p class="mt-1 text-sm text-slate-500">Complete an interview session to generate your first performance report.</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

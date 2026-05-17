@@ -1,0 +1,22 @@
+# Prevent directory listing
+Options -Indexes
+
+# Deny access to environment and hidden files
+<FilesMatch "^\.env$">
+    Require all denied
+</FilesMatch>
+
+# Deny any file that starts with a dot (e.g., .htaccess, .git, .ini)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Deny access to source code and configuration files that should not be served
+<FilesMatch "\.(py|sql|ini|cfg|conf|yml|yaml|sh)$">
+    Require all denied
+</FilesMatch>
+
+# Optional: block access to the db folder (which contains server‑side scripts)
+<Directory "${REQUEST_URI}/db">
+    Require all denied
+</Directory>

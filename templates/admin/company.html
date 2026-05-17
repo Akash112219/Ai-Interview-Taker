@@ -1,0 +1,947 @@
+{% extends 'layouts/dashboard-base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Section -->
+    <section class="page-shell rounded-3xl border border-white/10 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-xl md:p-8" data-aos="fade-up">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    <span class="iconify text-sm text-primary" data-icon="solar:users-group-two-rounded-bold-duotone"></span>
+                    Company Administration
+                </p>
+                <h1 class="mt-4 text-3xl font-black tracking-tight text-dark dark:text-white md:text-4xl">Registered Companies</h1>
+                <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">Manage registered corporate clients. View profiles, assign roles, and control account statuses.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="openCompanyModal()" class="btn inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-xl hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:user-plus-bold-duotone"></span>
+                    Add New Company
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Users Table Section -->
+    <section class="rounded-3xl border border-white/10 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-6 shadow-sm backdrop-blur-xl" data-aos="fade-up" data-aos-delay="100">
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
+            <h2 class="text-xl font-bold text-dark dark:text-white">Registered Companies</h2>
+            
+            <!-- Filters & Search -->
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <!-- Toggle Buttons -->
+                <div class="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 lg:mr-2">
+                    <button id="tabBtnCompanies" onclick="switchTab('companies')" class="flex-1 lg:flex-none rounded-lg bg-white dark:bg-slate-700 px-4 py-1.5 text-sm font-bold text-slate-800 dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all">Companies</button>
+                    <button id="tabBtnDocuments" onclick="switchTab('documents')" class="flex-1 lg:flex-none rounded-lg px-4 py-1.5 text-sm font-semibold text-slate-500 dark:text-slate-400 transition-all hover:text-slate-800 dark:hover:text-white">Documents</button>
+                    <button id="tabBtnSales" onclick="switchTab('sales')" class="flex-1 lg:flex-none rounded-lg px-4 py-1.5 text-sm font-semibold text-slate-500 dark:text-slate-400 transition-all hover:text-slate-800 dark:hover:text-white">Contact Sales</button>
+                </div>
+                
+                <div class="relative">
+                    <span class="iconify absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" data-icon="solar:magnifer-linear"></span>
+                    <input type="text" placeholder="Search companies..." class="w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2 pl-10 pr-4 text-sm text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <select title="Filter by Role" aria-label="Filter by Role" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="all">All Roles</option>
+                    <option value="admin">Admins</option>
+                    <option value="company">Companies</option>
+                    <option value="documents">Documents</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Views Container -->
+        <div id="companiesView" class="overflow-x-auto custom-scrollbar block">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50/50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Company Details</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Contact</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Plan</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    {% for company in admin_companies_with_documents %}
+                    <tr class="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <div class="flex items-center gap-4">
+                                <div class="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200">
+                                    <img src="{{ company.profile_img or 'https://ui-avatars.com/api/?name=' + (company.company_name|urlencode) + '&background=e0f2fe&color=0369a1' }}" alt="Avatar" class="h-full w-full object-cover" />
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-800 dark:text-white">{{ company.company_name }}</div>
+                                    <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500">{{ company.first_name }} {{ company.last_name }} (Owner)</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ company.email }}</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">{{ company.country or 'International' }}</div>
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                                <span class="iconify" data-icon="solar:buildings-bold-duotone"></span> 
+                                {% set plan_name = 'No Plan' %}
+                                {% for plan in subscription_plans %}
+                                    {% if plan.id == company.current_plan_id %}{% set plan_name = plan.name %}{% endif %}
+                                {% endfor %}
+                                {{ plan_name }}
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4">
+                            {% if company.is_active %}
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> Suspended
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button 
+                                    data-id="{{ company.id }}"
+                                    data-fname="{{ company.first_name }}"
+                                    data-lname="{{ company.last_name }}"
+                                    data-email="{{ company.email }}"
+                                    data-cname="{{ company.company_name }}"
+                                    data-cnic="{{ company.cnic or '' }}"
+                                    data-phone="{{ company.phone }}"
+                                    data-country="{{ company.country }}"
+                                    data-region="{{ company.region }}"
+                                    data-address="{{ company.address }}"
+                                    data-plan="{{ company.current_plan_id }}"
+                                    data-active="{{ '1' if company.is_active else '0' }}"
+                                    data-img="{{ company.profile_img or '' }}"
+                                    onclick="openEditModalFromButton(this)" title="Edit Company" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition hover:bg-primary/10 hover:text-primary">
+                                    <span class="iconify text-lg" data-icon="solar:pen-new-square-linear"></span>
+                                </button>
+                                {% if company.is_active %}
+                                <button onclick="suspendCompany('{{ company.id }}')" title="Suspend Company" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition hover:bg-amber-100 hover:text-amber-600">
+                                    <span class="iconify text-lg" data-icon="solar:forbidden-circle-linear"></span>
+                                </button>
+                                {% else %}
+                                <button onclick="unsuspendCompany('{{ company.id }}')" title="Unsuspend Company" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition hover:bg-emerald-100 hover:text-emerald-600">
+                                    <span class="iconify text-lg" data-icon="solar:refresh-circle-linear"></span>
+                                </button>
+                                {% endif %}
+                                <button onclick="deleteCompany('{{ company.id }}')" title="Delete Company" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition hover:bg-red-100 hover:text-red-600">
+                                    <span class="iconify text-lg" data-icon="solar:trash-bin-trash-linear"></span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not admin_companies_with_documents %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-slate-400 italic">No companies found.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Documents View Placeholder -->
+        <div id="documentsView" class="hidden pb-4">
+            
+            <!-- Company Selector -->
+            <div class="mb-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">Company Documents</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Select a company to review their uploaded verification documents.</p>
+                </div>
+                <div class="relative w-full sm:w-72">
+                    <select id="docCompanyFilter" onchange="filterDocuments()" title="Select a company" class="appearance-none w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-bold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 shadow-sm">
+                        <option value="" disabled selected>Select a company</option>
+                        {% for company in admin_companies_with_documents %}
+                        <option value="{{ company.id }}">{{ company.company_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" data-icon="solar:alt-arrow-down-linear"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2" id="documentsGrid">
+                {% for doc in admin_company_documents %}
+                <div class="doc-card group relative flex flex-col rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-5 transition hover:bg-white dark:hover:bg-slate-800 shadow-sm" data-company="{{ doc.company_id }}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <span class="iconify text-2xl" data-icon="solar:document-text-bold-duotone"></span>
+                        </div>
+                        <span class="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {% if doc.status == 'approved' %}bg-emerald-50 text-emerald-600{% elif doc.status == 'rejected' %}bg-red-50 text-red-600{% else %}bg-amber-50 text-amber-600{% endif %}">
+                            {{ doc.status }}
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-sm font-bold text-dark dark:text-white">{{ doc.document_name }}</h3>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ doc.company_name }} · {{ doc.uploaded_at.strftime('%b %d, %Y') if doc.uploaded_at else 'Unknown' }}</p>
+                    </div>
+                    <div class="mt-6 flex flex-wrap gap-2">
+                        <a href="/{{ doc.file_path }}" target="_blank" class="flex-1 text-center rounded-xl bg-primary/10 dark:bg-primary/20 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/20 dark:hover:bg-primary/30 focus:outline-none">View</a>
+                        {% if doc.status == 'pending' %}
+                        <button onclick="approveDocument(this, '{{ doc.doc_id }}')" class="flex-1 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 px-3 py-2 text-xs font-bold transition focus:outline-none">Approve</button>
+                        <button onclick="disapproveDocument(this, '{{ doc.doc_id }}')" class="flex-1 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500/20 px-3 py-2 text-xs font-bold transition focus:outline-none">Reject</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not admin_company_documents %}
+                <div class="col-span-full py-12 text-center text-slate-400 italic">No documents uploaded yet.</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contact Sales View -->
+        <div id="salesView" class="hidden overflow-x-auto custom-scrollbar block">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50/50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Date</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Contact</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Subject</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Message</th>
+                        <th scope="col" class="px-6 py-4 font-bold tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    {% for sale in contact_sales %}
+                    <tr class="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <span class="text-xs font-semibold text-slate-500">{{ sale.created_at.strftime('%Y-%m-%d %H:%M') if sale.created_at else '' }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-800 dark:text-white">{{ sale.name }}</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">{{ sale.email }}</div>
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">
+                            {{ sale.subject }}
+                        </td>
+                        <td class="px-6 py-4 max-w-xs truncate text-sm" title="{{ sale.message }}">
+                            {{ sale.message }}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                {{ sale.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not contact_sales %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-slate-400 italic">No contact sales requests found.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Add / Edit User Modal Overlay -->
+<div id="companyModalOverlay" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0 overflow-hidden">
+    <!-- Modal Content -->
+    <div id="companyModal" class="relative w-full max-w-4xl max-h-[95vh] scale-95 rounded-3xl border border-white/20 bg-white/95 dark:bg-slate-900/95 p-0 shadow-2xl transition-transform duration-300 flex flex-col overflow-hidden">
+        
+        <div class="flex items-start justify-between shrink-0 glass z-20 px-6 py-5 border-b border-slate-100 dark:border-slate-800 rounded-t-3xl bg-white/80 dark:bg-slate-900/80">
+            <div>
+                <h2 id="modalTitle" class="text-2xl font-bold text-dark dark:text-white">Create New Company</h2>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Fill out the form below to add a company to the system.</p>
+            </div>
+            <button type="button" onclick="closeCompanyModal()" title="Close modal" aria-label="Close modal" class="hover-subtle inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-500 dark:text-slate-400 transition-colors focus:outline-none">
+                <span class="iconify text-2xl" data-icon="solar:close-circle-bold-duotone"></span>
+            </button>
+        </div>
+
+        <!-- Scrollable Form Area -->
+        <div class="custom-scrollbar overflow-y-auto p-6 flex-1 bg-transparent">
+            <form id="companyForm" class="space-y-8">
+                
+                <div class="flex flex-col md:flex-row gap-8">
+                    <!-- Left Column: Avatar & Role -->
+                    <div class="md:w-1/3 space-y-6">
+                        <!-- Profile Image -->
+                        <div class="flex flex-col items-center">
+                            <div class="group relative h-32 w-32 overflow-hidden rounded-full border-4 border-white dark:border-slate-800 shadow-xl shadow-slate-200 dark:shadow-slate-900/50">
+                                <img id="profilePreview" src="https://ui-avatars.com/api/?name=New+User&background=f8fafc&color=94a3b8" alt="Profile" class="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
+                                <label for="profileUpload" class="absolute inset-0 flex cursor-pointer flex-col items-center justify-center bg-slate-900/40 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                                    <span class="iconify text-2xl" data-icon="solar:camera-add-bold-duotone"></span>
+                                    <span class="mt-1 text-xs font-bold uppercase tracking-wider">Upload</span>
+                                </label>
+                                <input type="file" id="profileUpload" class="hidden" accept="image/*" onchange="previewImage(event)" />
+                            </div>
+                            <p class="mt-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">Allowed: JPG, PNG, WEBP.<br/>Max size: 2MB.</p>
+                        </div>
+
+                        <!-- Role Selection -->
+                        <div class="rounded-2xl border border-slate-100 dark:border-slate-800 bg-secondary/30 dark:bg-slate-800/50 p-5">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">Subscription Plan</h3>
+                            <div class="relative">
+                                <select id="cPlan" title="Select Plan" aria-label="Select Plan" required class="appearance-none w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-bold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 shadow-sm">
+                                    <option value="" disabled selected>Select Plan</option>
+                                    {% for plan in subscription_plans %}
+                                    <option value="{{ plan.id }}">{{ plan.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" data-icon="solar:alt-arrow-down-linear"></span>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Assign a default subscription plan for the company.</p>
+                            
+                            <hr class="my-4 border-slate-200 dark:border-slate-700">
+                            
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">Account Status</h3>
+                            <div class="relative">
+                                <select id="uStatus" title="Select Status" aria-label="Select Status" required class="appearance-none w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-bold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 shadow-sm">
+                                    <option value="verified" selected>Verified</option>
+                                    <option value="unverified">Unverified</option>
+                                </select>
+                                <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" data-icon="solar:alt-arrow-down-linear"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: User Details -->
+                    <div class="md:w-2/3 space-y-6">
+                        
+                        <!-- Personal Details -->
+                        <div>
+                            <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                                <span class="iconify" data-icon="solar:user-id-linear"></span> Personal Information
+                            </h3>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">First Name</label>
+                                    <input type="text" id="uFirstName" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="John" />
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Last Name</label>
+                                    <input type="text" id="uLastName" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Doe" />
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Company Name</label>
+                                    <div class="relative">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 dark:text-slate-500">@</span>
+                                        <input type="text" id="cName" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="TechCorp Solutions" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">CNIC</label>
+                                    <input type="text" id="uCnic" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white font-mono tracking-widest transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="00000-0000000-0" oninput="formatCNIC(this)" />
+                                </div>
+                            </div>
+                            
+                            <!-- Password Generation Notice -->
+                            <div class="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 px-4 py-2 border border-blue-100 dark:border-blue-800">
+                                <span class="iconify text-lg text-blue-500" data-icon="solar:lock-keyhole-minimalistic-bold-duotone"></span>
+                                <p class="text-xs font-semibold text-blue-700 dark:text-blue-300">Password will be automatically generated based on the user's CNIC.</p>
+                            </div>
+                        </div>
+
+                        <!-- Contact Details -->
+                        <div>
+                            <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                                <span class="iconify" data-icon="solar:letter-linear"></span> Contact Details
+                            </h3>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Email Address</label>
+                                    <input type="email" id="uEmail" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="john.doe@example.com" />
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Mobile Number</label>
+                                    <input type="tel" id="uMobile" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white font-mono tracking-wide transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="+92 300 0000000" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div>
+                            <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                                <span class="iconify" data-icon="solar:map-point-linear"></span> Location
+                            </h3>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Country</label>
+                                    <div class="relative">
+                                        <select id="uCountry" title="Select Country" aria-label="Select Country" class="appearance-none w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 pl-4 pr-10 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
+                                            <option value="" disabled selected>Select Country</option>
+                                            <option value="PK">Pakistan</option>
+                                            <option value="US">United States</option>
+                                            <option value="UK">United Kingdom</option>
+                                        </select>
+                                        <span class="iconify absolute pointer-events-none right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" data-icon="solar:alt-arrow-down-linear"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Province / State</label>
+                                    <input type="text" id="uState" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-2.5 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="e.g. Punjab, California" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Full Address</label>
+                                    <textarea id="uAddress" rows="2" class="custom-scrollbar w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent py-3 px-4 text-sm font-semibold text-slate-800 dark:text-white transition-colors focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" placeholder="Street, City, Zip Code..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Modal Actions Footer -->
+        <div class="shrink-0 flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-b-3xl">
+            <div id="resetDefaultContainer" class="hidden">
+                <button type="button" onclick="resetPasswordToDefault()" class="inline-flex items-center gap-2 rounded-xl bg-amber-500/10 px-5 py-2.5 text-sm font-bold text-amber-600 transition hover:bg-amber-500/20 focus:outline-none">
+                    <span class="iconify text-lg" data-icon="solar:lock-password-bold-duotone"></span> Reset to Default
+                </button>
+            </div>
+            <div class="flex items-center gap-3 ml-auto">
+                <button type="button" onclick="closeCompanyModal()" class="hover-subtle rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors focus:outline-none">Cancel</button>
+                <button type="button" onclick="saveCompany()" class="btn inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/30">
+                    <span class="iconify text-lg" data-icon="solar:diskette-bold-duotone"></span> Save Company
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Progress Toast -->
+<div id="actionToast" class="fixed bottom-6 right-6 z-50 flex hidden items-center gap-4 rounded-2xl border border-white/10 dark:border-slate-800 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 translate-y-10 opacity-0">
+    <div id="toastIconContainer" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
+        <span id="toastIcon" class="iconify text-xl animate-spin" data-icon="solar:spinner-linear"></span>
+    </div>
+    <div>
+        <h4 id="toastTitle" class="text-sm font-bold text-white">Processing</h4>
+        <p id="toastDesc" class="mt-0.5 text-xs text-slate-300">Action in progress...</p>
+    </div>
+</div>
+
+
+<!-- Custom Confirm Modal -->
+<div id="confirmModalOverlay" class="fixed inset-0 z-[60] flex hidden items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-opacity opacity-0 overflow-hidden">
+    <div id="confirmModal" class="relative w-full max-w-sm scale-95 rounded-3xl border border-white/20 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-transform duration-300">
+        <div class="flex flex-col items-center text-center">
+            <div id="confirmIconContainer" class="flex h-16 w-16 items-center justify-center rounded-full mb-4">
+                <span id="confirmIcon" class="iconify text-3xl"></span>
+            </div>
+            <h3 id="confirmTitle" class="text-xl font-bold text-dark dark:text-white">Confirm Action</h3>
+            <p id="confirmDesc" class="mt-2 text-sm text-slate-500 dark:text-slate-400">Are you sure you want to proceed?</p>
+            
+            <div class="mt-6 flex w-full gap-3">
+                <button type="button" onclick="closeConfirmModal()" class="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none">Cancel</button>
+                <button type="button" id="confirmBtn" class="btn flex-1 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-lg transition focus:outline-none">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const companyOverlay = document.getElementById('companyModalOverlay');
+    const companyModal = document.getElementById('companyModal');
+
+    
+    // Tab Switching Logic
+    function switchTab(tab) {
+        const btnCompanies = document.getElementById('tabBtnCompanies');
+        const btnDocuments = document.getElementById('tabBtnDocuments');
+        const btnSales = document.getElementById('tabBtnSales');
+        const viewCompanies = document.getElementById('companiesView');
+        const viewDocuments = document.getElementById('documentsView');
+        const viewSales = document.getElementById('salesView');
+        
+        const activeClass = ['bg-white', 'dark:bg-slate-700', 'font-bold', 'text-slate-800', 'dark:text-white', 'shadow-[0_2px_8px_rgba(0,0,0,0.08)]'];
+        const inactiveClass = ['font-semibold', 'text-slate-500', 'dark:text-slate-400', 'hover:text-slate-800', 'dark:hover:text-white'];
+        
+        // Reset all views and buttons
+        viewCompanies.classList.add('hidden');
+        viewDocuments.classList.add('hidden');
+        if (viewSales) viewSales.classList.add('hidden');
+        
+        btnCompanies.classList.remove(...activeClass);
+        btnCompanies.classList.add(...inactiveClass);
+        btnDocuments.classList.remove(...activeClass);
+        btnDocuments.classList.add(...inactiveClass);
+        if (btnSales) {
+            btnSales.classList.remove(...activeClass);
+            btnSales.classList.add(...inactiveClass);
+        }
+        
+        if (tab === 'companies') {
+            viewCompanies.classList.remove('hidden');
+            btnCompanies.classList.add(...activeClass);
+            btnCompanies.classList.remove(...inactiveClass);
+        } else if (tab === 'documents') {
+            viewDocuments.classList.remove('hidden');
+            btnDocuments.classList.add(...activeClass);
+            btnDocuments.classList.remove(...inactiveClass);
+        } else if (tab === 'sales') {
+            if (viewSales) viewSales.classList.remove('hidden');
+            if (btnSales) {
+                btnSales.classList.add(...activeClass);
+                btnSales.classList.remove(...inactiveClass);
+            }
+        }
+    }
+
+    
+    // Document Filtering Logic
+    function filterDocuments() {
+        const selectedCompany = document.getElementById('docCompanyFilter').value;
+        const cards = document.querySelectorAll('.doc-card');
+        
+        cards.forEach(card => {
+            if (card.getAttribute('data-company') === selectedCompany) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+
+    // Document Action Logic
+    function approveDocument(btn) {
+        openConfirmModal('Approve Document', 'Are you sure you want to approve this verification document? This will update the company\'s status.', 'solar:check-circle-bold-duotone', 'emerald', () => {
+            showToast('Approving...', 'Updating document status...');
+            setTimeout(() => { 
+                showSuccessToast('Document Approved', 'The document has been successfully verified.', 'emerald'); 
+                
+                // Visual update to the card
+                const card = btn.closest('.doc-card');
+                const badge = card.querySelector('span.rounded-full');
+                badge.className = 'rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400';
+                badge.textContent = 'Approved';
+                
+                btn.disabled = true;
+                btn.className = 'flex-1 rounded-xl bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 cursor-not-allowed';
+                
+                const disapproveBtn = btn.nextElementSibling;
+                disapproveBtn.disabled = false;
+                disapproveBtn.className = 'flex-1 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-500/20 focus:outline-none';
+            }, 1000);
+        });
+    }
+
+    function disapproveDocument(btn) {
+        openConfirmModal('Disapprove Document', 'Are you sure you want to reject this document? The company will be required to re-upload it.', 'solar:danger-triangle-bold-duotone', 'red', () => {
+            showToast('Rejecting...', 'Updating document status...');
+            setTimeout(() => { 
+                showSuccessToast('Document Disapproved', 'The document has been rejected.', 'red'); 
+                
+                // Visual update to the card
+                const card = btn.closest('.doc-card');
+                const badge = card.querySelector('span.rounded-full');
+                badge.className = 'rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400';
+                badge.textContent = 'Disapproved';
+                
+                btn.disabled = true;
+                btn.className = 'flex-1 rounded-xl bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 cursor-not-allowed';
+                
+                const approveBtn = btn.previousElementSibling;
+                approveBtn.disabled = false;
+                approveBtn.className = 'flex-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-600 transition hover:bg-emerald-500/20 focus:outline-none';
+            }, 1000);
+        });
+    }
+
+    // CNIC Formatter
+    function formatCNIC(input) {
+        let val = input.value.replace(/\D/g, '');
+        if (val.length > 13) val = val.substring(0, 13);
+        
+        let formatted = '';
+        if (val.length > 0) {
+            formatted = val.substring(0, 5);
+        }
+        if (val.length > 5) {
+            formatted += '-' + val.substring(5, 12);
+        }
+        if (val.length > 12) {
+            formatted += '-' + val.substring(12, 13);
+        }
+        input.value = formatted;
+    }
+
+    // Profile Image Preview
+    function previewImage(event) {
+        const input = event.target;
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profilePreview').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Modal Operations
+    function openCompanyModal(companyId = null) {
+        document.getElementById('companyForm').reset();
+        document.getElementById('profilePreview').src = 'https://ui-avatars.com/api/?name=New+User&background=f8fafc&color=94a3b8';
+
+        if (companyId) {
+            document.getElementById('modalTitle').textContent = 'Edit Company';
+            document.getElementById('resetDefaultContainer').classList.remove('hidden');
+        } else {
+            document.getElementById('modalTitle').textContent = 'Create New Company';
+            document.getElementById('resetDefaultContainer').classList.add('hidden');
+        }
+
+        companyOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            companyOverlay.classList.remove('opacity-0');
+            companyOverlay.classList.add('opacity-100');
+            companyModal.classList.remove('scale-95');
+            companyModal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function openEditModalFromButton(btn) {
+        const company = {
+            id: btn.dataset.id,
+            first_name: btn.dataset.fname,
+            last_name: btn.dataset.lname,
+            email: btn.dataset.email,
+            company_name: btn.dataset.cname,
+            cnic: btn.dataset.cnic,
+            phone: btn.dataset.phone,
+            country: btn.dataset.country,
+            region: btn.dataset.region,
+            address: btn.dataset.address,
+            current_plan_id: btn.dataset.plan,
+            is_active: btn.dataset.active === '1',
+            profile_img: btn.dataset.img
+        };
+        openCompanyModalFromData(company);
+    }
+
+    function openCompanyModalFromData(company) {
+        openCompanyModal(company.id); // Passing ID to show it's edit mode
+        document.getElementById('modalTitle').textContent = 'Edit Company';
+        document.getElementById('uFirstName').value = company.first_name || '';
+        document.getElementById('uLastName').value = company.last_name || '';
+        document.getElementById('uEmail').value = company.email || '';
+        document.getElementById('cName').value = company.company_name || '';
+        document.getElementById('uCnic').value = company.cnic || '';
+        document.getElementById('uMobile').value = company.phone || '';
+        document.getElementById('uCountry').value = company.country || '';
+        document.getElementById('uState').value = company.region || '';
+        document.getElementById('uAddress').value = company.address || '';
+        document.getElementById('cPlan').value = company.current_plan_id || '';
+        document.getElementById('uStatus').value = company.is_active ? 'verified' : 'unverified';
+        document.getElementById('profilePreview').src = company.profile_img || `https://ui-avatars.com/api/?name=${encodeURIComponent(company.company_name || 'Company')}&background=e0f2fe&color=0369a1`;
+        
+        // Store company ID for update
+        document.getElementById('companyForm').setAttribute('data-company-id', company.id);
+        document.getElementById('companyForm').setAttribute('data-user-email', company.email);
+        
+        document.getElementById('resetDefaultContainer').classList.remove('hidden');
+    }
+
+    function closeCompanyModal() {
+        companyOverlay.classList.remove('opacity-100');
+        companyOverlay.classList.add('opacity-0');
+        companyModal.classList.remove('scale-100');
+        companyModal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            companyOverlay.classList.add('hidden');
+            document.getElementById('companyForm').reset();
+        }, 300);
+    }
+
+    companyOverlay.addEventListener('click', function(e) {
+        if (e.target === companyOverlay) closeCompanyModal();
+    });
+
+    // Actions
+    function saveCompany() {
+        const form = document.getElementById('companyForm');
+        const companyId = form.getAttribute('data-company-id');
+        
+        if (!document.getElementById('uFirstName').value || !document.getElementById('uEmail').value || !document.getElementById('cName').value) {
+            alert("Please fill out all required fields.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('company_name', document.getElementById('cName').value);
+        formData.append('first_name', document.getElementById('uFirstName').value);
+        formData.append('last_name', document.getElementById('uLastName').value);
+        formData.append('email', document.getElementById('uEmail').value);
+        formData.append('phone', document.getElementById('uMobile').value);
+        formData.append('country', document.getElementById('uCountry').value);
+        formData.append('region', document.getElementById('uState').value);
+        formData.append('address', document.getElementById('uAddress').value);
+        formData.append('cnic', document.getElementById('uCnic').value);
+        formData.append('subscription_plan_id', document.getElementById('cPlan').value);
+        formData.append('is_active', document.getElementById('uStatus').value === 'verified' ? 1 : 0);
+        
+        const profileFile = document.getElementById('profileUpload').files[0];
+        if (profileFile) {
+            formData.append('profile_image', profileFile);
+        }
+
+        const url = companyId ? `/admin/company/update/${companyId}` : '/admin/company/create';
+        const method = companyId ? 'POST' : 'POST'; // Both use POST for simplicity
+
+        closeCompanyModal();
+        showToast('Saving Company', 'Updating system records...');
+        
+        fetch(url, {
+            method: method,
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast('Company Saved!', 'The company profile and settings have been updated.');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showErrorToast('Error', data.error || 'Failed to save company');
+            }
+        })
+        .catch(error => {
+            showErrorToast('Error', 'Network error occurred');
+            console.error('Error:', error);
+        });
+    }
+
+    let confirmActionCallback = null;
+
+    function openConfirmModal(title, desc, icon, color, callback) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmDesc').textContent = desc;
+        
+        const iconContainer = document.getElementById('confirmIconContainer');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const iconEl = document.getElementById('confirmIcon');
+        
+        iconEl.setAttribute('data-icon', icon);
+        
+        iconContainer.className = `flex h-16 w-16 items-center justify-center rounded-full bg-${color}-100 text-${color}-500 dark:bg-${color}-500/10 dark:text-${color}-400 mb-4`;
+        
+        if(color === 'red') {
+            confirmBtn.className = 'flex-1 rounded-xl btn bg-red-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/30 transition hover:bg-red-600 focus:outline-none';
+        } else if (color === 'amber') {
+            confirmBtn.className = 'flex-1 rounded-xl btn bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:bg-amber-600 focus:outline-none';
+        } else {
+            confirmBtn.className = 'flex-1 rounded-xl btn bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 focus:outline-none';
+        }
+
+        confirmActionCallback = callback;
+
+        const overlay = document.getElementById('confirmModalOverlay');
+        const modal = document.getElementById('confirmModal');
+        
+        overlay.classList.remove('hidden');
+        setTimeout(() => {
+            overlay.classList.remove('opacity-0');
+            overlay.classList.add('opacity-100');
+            modal.classList.remove('scale-95');
+            modal.classList.add('scale-100');
+        }, 20);
+    }
+
+    function closeConfirmModal() {
+        const overlay = document.getElementById('confirmModalOverlay');
+        const modal = document.getElementById('confirmModal');
+        
+        overlay.classList.remove('opacity-100');
+        overlay.classList.add('opacity-0');
+        modal.classList.remove('scale-100');
+        modal.classList.add('scale-95');
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            confirmActionCallback = null;
+        }, 300);
+    }
+
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+        if(confirmActionCallback) confirmActionCallback();
+        closeConfirmModal();
+    });
+
+    function suspendCompany(id) {
+        openConfirmModal('Suspend Company', 'Are you sure you want to suspend this company? They will lose platform access.', 'solar:forbidden-circle-bold-duotone', 'amber', () => {
+            showToast('Suspending Company', 'Updating account status...');
+            
+            fetch(`/admin/company/suspend/${id}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessToast('Company Suspended', 'The account has been suspended successfully.', 'amber');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showErrorToast('Error', data.error || 'Failed to suspend company');
+                }
+            })
+            .catch(error => {
+                showErrorToast('Error', 'Network error occurred');
+                console.error('Error:', error);
+            });
+        });
+    }
+
+    function unsuspendCompany(id) {
+        openConfirmModal('Restore Access', "Restore this company's platform access?", 'solar:refresh-circle-bold-duotone', 'emerald', () => {
+            showToast('Restoring Access', 'Updating account status...');
+            
+            fetch(`/admin/company/unsuspend/${id}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessToast('Access Restored', 'The company can now log in normally.');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showErrorToast('Error', data.error || 'Failed to restore access');
+                }
+            })
+            .catch(error => {
+                showErrorToast('Error', 'Network error occurred');
+                console.error('Error:', error);
+            });
+        });
+    }
+
+    function deleteCompany(id) {
+        openConfirmModal('Delete Company', 'CRITICAL WARNING: Are you sure you want to permanently delete this company? This action cannot be undone.', 'solar:trash-bin-trash-bold-duotone', 'red', () => {
+            showToast('Deleting Company', 'Removing records...');
+            
+            fetch(`/admin/company/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessToast('Company Deleted', 'All records have been permanently removed.', 'red');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showErrorToast('Error', data.error || 'Failed to delete company');
+                }
+            })
+            .catch(error => {
+                showErrorToast('Error', 'Network error occurred');
+                console.error('Error:', error);
+            });
+        });
+    }
+
+    // Toast Logic
+    function showToast(title, desc) {
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+        
+        toastIcon.setAttribute('data-icon', 'solar:spinner-linear');
+        toastIcon.classList.add('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-400';
+        toastTitle.textContent = title;
+        toastDesc.textContent = desc;
+        
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }, 20);
+    }
+
+    function showSuccessToast(title, desc, color = 'emerald') {
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+
+        toastIcon.setAttribute('data-icon', 'solar:check-circle-linear');
+        toastIcon.classList.remove('animate-spin');
+        iconContainer.className = `flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-${color}-500/20 text-${color}-400`;
+        toastTitle.textContent = title;
+        toastDesc.textContent = desc;
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => { toast.classList.add('hidden'); }, 500);
+        }, 3000);
+    }
+
+    function showErrorToast(title, desc) {
+        const toast = document.getElementById('actionToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastDesc = document.getElementById('toastDesc');
+        const toastIcon = document.getElementById('toastIcon');
+        const iconContainer = document.getElementById('toastIconContainer');
+
+        toastIcon.setAttribute('data-icon', 'solar:danger-triangle-linear');
+        toastIcon.classList.remove('animate-spin');
+        iconContainer.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400';
+        toastTitle.textContent = title;
+        toastDesc.textContent = desc;
+        
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => { toast.classList.add('hidden'); }, 500);
+        }, 3000);
+    }
+
+    function resetPasswordToDefault() {
+        const cnic = document.getElementById('uCnic').value;
+        const email = document.getElementById('uEmail').value;
+        
+        if (!cnic) {
+            alert("CNIC/ID Card number is required to reset to default password.");
+            return;
+        }
+
+        openConfirmModal('Reset Password', 'Reset this company administrator\'s password to their ID Card number?', 'solar:lock-password-bold-duotone', 'amber', () => {
+            showToast('Resetting Password', 'Updating security records...');
+            
+            fetch(`/api/users/reset-by-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ email: email, cnic: cnic })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessToast('Password Reset', 'Password is now the ID Card number.');
+                } else {
+                    showErrorToast('Error', data.error || 'Failed to reset password');
+                }
+            })
+            .catch(error => {
+                showErrorToast('Error', 'Network error occurred');
+                console.error('Error:', error);
+            });
+        });
+    }
+</script>
+{% endblock %}
