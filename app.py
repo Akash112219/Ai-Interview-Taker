@@ -1994,7 +1994,7 @@ def admin_create_company():
 
         new_user_id = execute_insert_returning_id(db, cursor, """
             INSERT INTO users (username, email, password_hash, first_name, last_name, phone, country, role, is_active, cnic, profile_img)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'company', 1, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'company', TRUE, %s, %s)
         """, (email.split("@", 1)[0], email, hashed_password, first_name, last_name, phone, country, cnic, profile_img))
 
         # Create company
@@ -2211,7 +2211,7 @@ def admin_create_subscription_plan():
         cursor.execute("""
             INSERT INTO subscription_plans 
             (name, target_audience, monthly_price, yearly_price, features, is_active)
-            VALUES (%s, %s, %s, %s, %s, 1)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
         """, (name, target_audience, monthly_price, yearly_price, features))
         
         db.commit()
@@ -2394,7 +2394,7 @@ def company_users_import():
             
             new_user_id = execute_insert_returning_id(db, cursor, """
                 INSERT INTO users (username, email, password_hash, first_name, last_name, company_id, role, cnic, designation, is_active)
-                VALUES (%s, %s, %s, %s, %s, %s, 'company_user', %s, %s, 1)
+                VALUES (%s, %s, %s, %s, %s, %s, 'company_user', %s, %s, TRUE)
             """, (username, email, hashed_password, first_name, last_name, company_id, cnic, designation))
             
             prefix = "".join(filter(str.isalnum, str(comp["company_name"])))[:2].upper()
