@@ -184,13 +184,13 @@ def get_notification_data(user_id, role=None):
         cursor = get_db_cursor(db, dictionary=True)
         if role == 'admin':
             # Admin sees global notifications
-            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE is_read = 0")
+            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE")
             count = cursor.fetchone()["total"]
             cursor.execute("SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5")
             recent = cursor.fetchall()
         else:
             # Users see their own notifications
-            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE user_id = %s AND is_read = 0", (user_id,))
+            cursor.execute("SELECT COUNT(*) as total FROM notifications WHERE user_id = %s AND is_read = FALSE", (user_id,))
             count = cursor.fetchone()["total"]
             cursor.execute("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC LIMIT 5", (user_id,))
             recent = cursor.fetchall()
@@ -1271,7 +1271,7 @@ def add_payment_method():
     # Check if this is the first card, make it primary if so
     cursor.execute("SELECT COUNT(*) FROM payment_methods WHERE user_id=%s", (session["user_id"],))
     count = cursor.fetchone()[0]
-    is_primary = 1 if count == 0 else 0
+    is_primary = True if count == 0 else False
     
     cursor.execute("""
         INSERT INTO payment_methods (user_id, name_on_card, card_number, expiry, cvv, is_primary)
@@ -1294,8 +1294,8 @@ def set_primary_payment_method():
     db = get_db()
     cursor = get_db_cursor(db)
     
-    cursor.execute("UPDATE payment_methods SET is_primary=0 WHERE user_id=%s", (session["user_id"],))
-    cursor.execute("UPDATE payment_methods SET is_primary=1 WHERE id=%s AND user_id=%s", (card_id, session["user_id"]))
+    cursor.execute("UPDATE payment_methods SET is_primary=FALSE WHERE user_id=%s", (session["user_id"],))
+    cursor.execute("UPDATE payment_methods SET is_primary=TRUE WHERE id=%s AND user_id=%s", (card_id, session["user_id"]))
     
     db.commit()
     db.close()
@@ -1313,7 +1313,7 @@ def upgrade_subscription():
     cursor = get_db_cursor(db, dictionary=True)
     
     # Check for primary payment method
-    cursor.execute("SELECT id FROM payment_methods WHERE user_id=%s AND is_primary=1", (session["user_id"],))
+    cursor.execute("SELECT id FROM payment_methods WHERE user_id=%s AND is_primary=TRUE", (session["user_id"],))
     pm = cursor.fetchone()
     if not pm:
         db.close()
