@@ -92,6 +92,15 @@ def get_db():
             or os.getenv("SUPABASE_DB_URL")
             or os.getenv("POSTGRES_URL")
         )
+        
+        from urllib.parse import urlparse, urlencode, parse_qsl
+        parsed = urlparse(database_url)
+        query_params = dict(parse_qsl(parsed.query))
+        query_params.pop('supa', None)
+        query_params.pop('pgbouncer', None)
+        new_query = urlencode(query_params)
+        database_url = parsed._replace(query=new_query).geturl()
+
         connect_kwargs = {"sslmode": os.getenv("POSTGRES_SSLMODE", "require")}
         if "sslmode=" in database_url:
             connect_kwargs.pop("sslmode", None)
@@ -3148,7 +3157,5 @@ def reset_by_email_password():
     return jsonify({"success": "Password reset to default (ID Card number) successfully"}), 200
 
 # =========================
-# RUN
+# RUN (Removed for Vercel Serverless)
 # =========================
-if __name__ == "__main__":
-    app.run(debug=True)
